@@ -1,0 +1,14 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Youtube-subs";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Youtube-subs</h1>
+    <p>Enter youtube video URL to read its auto-generated subtitles:</p>
+    <form method="post">
+        <input type="url" asp-for="VideoUrl">
+        <input type="submit">
+    </form>
+</div>

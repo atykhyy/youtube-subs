@@ -1,0 +1,151 @@
+﻿@page "{VideoId}"
+@model youtube_subs.SubtitlesModel
+@{
+    Layout = null ;
+}
+<!DOCTYPE html>
+<html>
+<style type='text/css'>
+<!--
+#text { line-height:1.5; }
+@@media screen and (orientation:landscape) {
+#text             { width:66%;left:4.5%;position:absolute;overflow-y:scroll;height:99%; }
+#player-container { width:25%;position:absolute;left:75%; }
+}
+@@media screen and (orientation:portrait) {
+body              { position:absolute;height:99%; }
+#text             { height:74%;overflow-y:scroll; }
+#player-container { height:25%; }
+}
+-->
+</style>
+<body>
+  <script>
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  var firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+  var player;
+  var suppressPlay = false;
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+      height: '200',
+      width: '320',
+      videoId: '@Model.VideoId',
+      events: {
+        'onReady': onPlayerReady,
+        'onStateChange': onStateChange,
+      }
+    });
+  }
+  function onPlayerReady(event) {
+    var highlightedItem = null;
+    var checkPlayerTime = function () {
+      var t = player.getCurrentTime();
+      if (!isNaN(t)) {
+        items = document.getElementById('text').childNodes;
+        iprev = null;
+        icurr = null;
+        for (i = 0 ; i < items.length ; ++i) {
+          item = items[i];
+          if (item.id && item.id.startsWith('ts'))
+          {
+            iprev = icurr;
+            icurr = item;
+            if (item.id.substring(2) > t * 1000) break;
+          }
+        }
+        item = iprev ? iprev : icurr;
+        if (highlightedItem != item) {
+          if (highlightedItem) highlightedItem.style.background = '';
+          if (item) item.style.background = '#dfd';
+          highlightedItem = item;
+        }
+      }
+      window.requestAnimationFrame(checkPlayerTime);
+    }
+    window.requestAnimationFrame(checkPlayerTime);
+  }
+  function onStateChange(event) {
+    if(event.data == 1 && suppressPlay)
+    {
+      suppressPlay = false;
+      player.pauseVideo();
+    }
+  }
+  function onTextClicked(element) {
+    var tcode = 0.001 * element.id.substring(2);
+    if(element.timerID) {
+      clearTimeout(element.timerID);
+      element.timerID=null;
+      window.getSelection().removeAllRanges();
+      player.seekTo(tcode,true);
+      player.playVideo();
+    } else {
+      element.timerID = setTimeout(function() {
+        element.timerID = null;
+        switch(player.getPlayerState()) {
+        case 1: // playing
+            player.pauseVideo();
+        case 2: // paused
+          break;
+        default:// not loaded
+          suppressPlay = true;
+        }
+        player.seekTo(tcode,true);
+      }, 250);
+    }
+  }
+  </script>
+  <div id='player-container'>
+    <div id='player'></div>
+  </div>
+  <div id='text'>
+  @{
+    // find out if the subtitles are "enhanced"
+    var enhanced = false ;
+    foreach (var line in Model.Lines)
+        if (!String.IsNullOrWhiteSpace (line) && !line.Contains (" --> ") && line.Contains ("<"))
+        {
+            enhanced = true ;
+            break ;
+        }
+
+    @:<!-- Enhanced subtitle format: @enhanced -->
+
+    var tcode = default (TimeSpan) ;
+    var start = false ;
+    foreach (var line in Model.Lines)
+    {
+        if (String.IsNullOrWhiteSpace (line)) continue ;
+        if (line.Contains (" --> "))
+        {
+            start = true ;
+            tcode = TimeSpan.Parse (line.Substring (0, line.IndexOf (" --> "))) ;
+        }
+        else
+        if (!start) continue ;
+        else
+        if (!enhanced)
+        {
+            @:<a id="ts@((int)tcode.TotalMilliseconds)" onclick="onTextClicked(this);">@line.Trim()</a>
+        }
+        else
+        if (line.Contains ("<"))
+        {
+            var skip = 0 ;
+            var text = new System.Text.StringBuilder () ;
+            foreach (var ch in line)
+            switch (ch)
+            {
+            case '<': skip++ ; break ;
+            case '>': skip-- ; break ;
+            default:  if (skip == 0) text.Append (ch) ; break ;
+            }
+            @:<a id="ts@((int)tcode.TotalMilliseconds)" onclick="onTextClicked(this);">@text</a>
+        }
+    }
+  }
+  </div>
+</body>
+</html>
