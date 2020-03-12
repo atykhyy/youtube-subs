@@ -122,28 +122,35 @@ body              { position:absolute;height:99%; }
         {
             start = true ;
             tcode = TimeSpan.Parse (line.Substring (0, line.IndexOf (" --> "))) ;
+            continue ;
         }
-        else
-        if (!start) continue ;
-        else
+
+        if (!start)
+            continue ;
+
+        string text ;
         if (!enhanced)
         {
-            @:<a id="ts@((int)tcode.TotalMilliseconds)" onclick="onTextClicked(this);">@line.Trim()</a>
+            text = line.Trim () ;
         }
         else
         if (line.Contains ("<"))
         {
             var skip = 0 ;
-            var text = new System.Text.StringBuilder () ;
+            var sb   = new System.Text.StringBuilder () ;
             foreach (var ch in line)
             switch (ch)
             {
             case '<': skip++ ; break ;
             case '>': skip-- ; break ;
-            default:  if (skip == 0) text.Append (ch) ; break ;
+            default:  if (skip == 0) sb.Append (ch) ; break ;
             }
-            @:<a id="ts@((int)tcode.TotalMilliseconds)" onclick="onTextClicked(this);">@text</a>
+
+            text = sb.ToString () ;
         }
+        else continue ;
+
+        @:<a id="ts@((int)tcode.TotalMilliseconds)" onclick="onTextClicked(this);">@System.Net.WebUtility.HtmlDecode(text)</a>
     }
   }
   </div>
