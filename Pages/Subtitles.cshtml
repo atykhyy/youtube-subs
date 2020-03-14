@@ -1,10 +1,12 @@
-﻿@page "{VideoId}"
-@model youtube_subs.SubtitlesModel
+﻿@page "{VideoId}/{Lang}"
+@model SubtitlesModel
 @{
     Layout = null ;
 }
 <!DOCTYPE html>
 <html>
+<head>
+<title>@Model.Title</title>
 <style type='text/css'>
 <!--
 #text { line-height:1.5; }
@@ -19,6 +21,7 @@ body              { position:absolute;height:99%; }
 }
 -->
 </style>
+</head>
 <body>
   <script>
   var tag = document.createElement('script');
@@ -99,6 +102,12 @@ body              { position:absolute;height:99%; }
   </script>
   <div id='player-container'>
     <div id='player'></div>
+    <form method="post">
+        Reload in
+        <select asp-for="Lang" asp-items="Model.Langs">
+        </select>
+        <input type="submit" value="&gt;&gt;" />
+    </form>
   </div>
   <div id='text'>
   @{

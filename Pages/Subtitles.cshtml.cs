@@ -1,16 +1,15 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Net.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace youtube_subs
+namespace youtube_subs.Pages
 {
     [ResponseCache (Location = ResponseCacheLocation.Any, Duration = 2592000)]
-    public class SubtitlesModel : PageModel
+    public class SubtitlesModel : VttPageModelBase
     {
         [BindProperty (SupportsGet = true)]
         public string VideoId { get ; set ; }
@@ -18,60 +17,73 @@ namespace youtube_subs
         [BindProperty (SupportsGet = true)]
         public string Lang { get ; set ; }
 
-        public string[] Lines { get ; set ; }
+        public string Title { get ; set ; }
+
+        public List<SelectListItem> Langs { get ; set ; } = new List<SelectListItem> () ;
+
+        public List<string> Lines { get ; set ; }
 
         public async Task OnGetAsync ()
         {
             if (VideoId == null)
                 throw new ArgumentNullException (nameof (VideoId)) ;
 
-            if (!IsAbsolutelySafe (VideoId))
+            if (!VideoId.IsAbsolutelySafe ())
                 throw new ArgumentException (nameof (VideoId)) ;
 
             if (Lang == null)
-            {
-                // TODO: parse Accept-Language?
-                Lang = "en" ;
-            }
-            else
-            if (!IsAbsolutelySafe (Lang))
+                throw new ArgumentNullException (nameof (Lang)) ;
+
+            if (!Lang.IsAbsolutelySafe ())
                 throw new ArgumentException (nameof (Lang)) ;
 
-            var temp = Path.GetTempPath () ;
-            var guid = Guid.NewGuid ().ToString () ;
-
-            using (var ydl = new Process
+            if (!Request.Cookies.TryGetValue ($"vtt-{VideoId}-url",   out var vttUrl) ||
+                !Request.Cookies.TryGetValue ($"vtt-{VideoId}-langs", out var vttLangs))
             {
-                StartInfo  = new ProcessStartInfo ("/bin/youtube-dl",
-                    $"--skip-download --sub-lang {Lang} --write-auto-sub -o \"{temp}{guid}\" https://www.youtube.com/watch?v={VideoId}"),
-                EnableRaisingEvents = true,
-            })
-            {
-                var tcs = new TaskCompletionSource<int> () ;
-                ydl.Exited += (sender, e) => tcs.TrySetResult (ydl.ExitCode) ;
-                ydl.Start () ;
+                var (vtts, title) = await Helpers.GetManifestDataAsync (VideoId, HttpContext.RequestAborted) ;
 
-                using (HttpContext.RequestAborted.Register (() => tcs.TrySetCanceled (HttpContext.RequestAborted)))
-                    if (await tcs.Task != 0)
-                        throw new Exception ($"youtube-dl: {ydl.ExitCode}") ;
+                if (!vtts.TryGetValue (Lang, out vttUrl))
+                    throw new ArgumentOutOfRangeException (nameof (Lang)) ;
+
+                // set list of languages from vtts.Keys
+                foreach (var item in Languages.Items)
+                    if (vtts.ContainsKey (item.Value))
+                        Langs.Add (item) ;
+
+                AdjustVttCookies (vtts, VideoId, Lang, title) ;
+            }
+            else
+            {
+                // set list of languages from vttLangs
+                foreach (var item in Languages.Items)
+                    if (vttLangs.Contains (item.Value))
+                        Langs.Add (item) ;
+
+                Title = Request.Cookies["title"] ?? $"#{VideoId}" ;
             }
 
-            foreach (var file in Directory.EnumerateFiles (temp, guid + "*"))
+            using (var client = new HttpClient ())
+            using (HttpContext.RequestAborted.Register (client.CancelPendingRequests))
+            using (var stream = await client.GetStreamAsync (vttUrl))
+            using (var reader = new StreamReader (stream))
             {
-                Lines = System.IO.File.ReadAllLines (file) ;
-                return ;
-            }
+                Lines = new List<string> () ;
 
-            throw new Exception ("downloaded subtitle file not found") ;
+                while (true)
+                {
+                    var line  = await reader.ReadLineAsync () ;
+                    if (line == null)
+                        return ;
+
+                    Lines.Add (line) ;
+                }
+            }
         }
 
-        private bool IsAbsolutelySafe (string s)
+        public IActionResult OnPost ()
         {
-            foreach (var ch in s)
-                if (!(ch >= '0' && ch <= '9' || ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch == '_' || ch == '-'))
-                    return false ;
-
-            return true ;
+            Response.Cookies.Delete ($"vtt-{VideoId}-url") ;
+            return RedirectToPage   ("Subtitles", new { VideoId, Lang }) ;
         }
     }
 }

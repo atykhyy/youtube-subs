@@ -7,8 +7,32 @@
 <div class="text-center">
     <h1 class="display-4">Youtube-subs</h1>
     <p>Enter youtube video URL to read its auto-generated subtitles:</p>
-    <form method="post">
-        <input type="url" asp-for="VideoUrl">
-        <input type="submit">
+    <form method="post" asp-page-handler="Read">
+        <input type="url" asp-for="VideoUrl" />
+        <input type="submit" value="Read" />
+        in
+        <select asp-for="UseLang" asp-items="@Languages.Items">
+            <option value="*">(select based on your language preferences)</option>
+        </select>
+    </form>
+    <p />
+    <p>Select your preferred subtitle languages:</p>
+    <form method="post" asp-page-handler="Save">
+        <select asp-for="Lang1.Code" asp-items="@Languages.Items">
+        </select>
+        <br />
+        <input  asp-for="Lang1.Prefer">Prefer this language if it is the audio language
+        <br />
+        <select asp-for="Lang2.Code" asp-items="@Languages.Items">
+        </select>
+        <br />
+        <input  asp-for="Lang2.Prefer">Prefer this language if it is the audio language
+        <br />
+        <select asp-for="Lang3.Code" asp-items="@Languages.Items">
+        </select>
+        <br />
+        <input  asp-for="Lang3.Prefer">Prefer this language if it is the audio language
+        <br />
+        <input type="submit" value="Save" />
     </form>
 </div>
