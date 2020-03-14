@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace youtube_subs.Pages
@@ -28,13 +29,15 @@ namespace youtube_subs.Pages
 
     public class IndexModel : VttPageModelBase
     {
-        private readonly ILogger<IndexModel> _logger;
+        private readonly IConfiguration      m_config ;
+        private readonly ILogger<IndexModel> m_logger ;
 
         private readonly static Newtonsoft.Json.JsonSerializer JsonSerializer = Newtonsoft.Json.JsonSerializer.CreateDefault () ;
 
-        public IndexModel (ILogger<IndexModel> logger)
+        public IndexModel (IConfiguration config, ILogger<IndexModel> logger)
         {
-            _logger = logger;
+            m_config = config ;
+            m_logger = logger ;
         }
 
         [System.ComponentModel.DataAnnotations.RegularExpression (@"^https\://www.youtube.com/watch\?v\=[a-zA-Z_-]+$")]
@@ -114,7 +117,7 @@ namespace youtube_subs.Pages
                     if (UseLang == null || UseLang == "*")
                     do
                     {
-                        var videoDataUrl  = $"https://www.googleapis.com/youtube/v3/videos?id={videoId}&key=AIzaSyDT-dtzWn3P8P-ido_GbulWx3lMebWZ37I&part=snippet&fields=items/snippet/defaultAudioLanguage" ;
+                        var videoDataUrl  = $"https://www.googleapis.com/youtube/v3/videos?id={videoId}&key={m_config["GoogleApiKey"]}&part=snippet&fields=items/snippet/defaultAudioLanguage" ;
 
                         using (var client = new HttpClient ())
                         using (HttpContext.RequestAborted.Register (client.CancelPendingRequests))
