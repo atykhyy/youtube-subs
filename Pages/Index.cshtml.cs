@@ -40,7 +40,7 @@ namespace youtube_subs.Pages
             m_logger = logger ;
         }
 
-        [System.ComponentModel.DataAnnotations.RegularExpression (@"^https\://www.youtube.com/watch\?v\=[a-zA-Z_-]+$")]
+        [System.ComponentModel.DataAnnotations.RegularExpression (@"^https\://(www|m).youtube.com/watch\?v\=[a-zA-Z_-]+$")]
         [BindProperty]
         public string VideoUrl { get ; set ; }
 
@@ -105,107 +105,112 @@ namespace youtube_subs.Pages
             return RedirectToPage () ;
         }
 
-        public async Task<IActionResult> OnPostReadAsync ()
+        public Task<IActionResult> OnPostReadAsync ()
         {
+            if (VideoUrl?.StartsWith ("https://m.youtube.com/watch?v=") == true)
+                return ProcessPostAsync (VideoUrl.Substring (30)) ;
+
             if (VideoUrl?.StartsWith ("https://www.youtube.com/watch?v=") == true)
+                return ProcessPostAsync (VideoUrl.Substring (32)) ;
+
+            return Task.FromException<IActionResult> (new Exception ("Invalid URL format")) ;
+        }
+
+        private async Task<IActionResult> ProcessPostAsync (string videoId)
+        {
+            if (!videoId.IsAbsolutelySafe ())
+                throw new Exception ("Invalid URL format") ;
+
+            var (vtts, title) = await Helpers.GetManifestDataAsync (videoId, HttpContext.RequestAborted) ;
+
+            if (UseLang == null || UseLang == "*")
+            do
             {
-                var videoId = VideoUrl.Substring (32) ;
-                if (videoId.IsAbsolutelySafe ())
+                var videoDataUrl  = $"https://www.googleapis.com/youtube/v3/videos?id={videoId}&key={m_config["GoogleApiKey"]}&part=snippet&fields=items/snippet/defaultAudioLanguage" ;
+
+                using (var client = new HttpClient ())
+                using (HttpContext.RequestAborted.Register (client.CancelPendingRequests))
+                using (var stream = await client.GetStreamAsync (videoDataUrl))
+                using (var reader = new Newtonsoft.Json.JsonTextReader (new System.IO.StreamReader (stream)))
                 {
-                    var (vtts, title) = await Helpers.GetManifestDataAsync (videoId, HttpContext.RequestAborted) ;
-
-                    if (UseLang == null || UseLang == "*")
-                    do
+                    var videoData = JsonSerializer.Deserialize<YoutubeVideoData> (reader) ;
+                    var defLang1  = videoData?.Infos?.FirstOrDefault ()?.Snippet?.DefaultAudioLanguage ;
+                    if (defLang1 != null)
                     {
-                        var videoDataUrl  = $"https://www.googleapis.com/youtube/v3/videos?id={videoId}&key={m_config["GoogleApiKey"]}&part=snippet&fields=items/snippet/defaultAudioLanguage" ;
-
-                        using (var client = new HttpClient ())
-                        using (HttpContext.RequestAborted.Register (client.CancelPendingRequests))
-                        using (var stream = await client.GetStreamAsync (videoDataUrl))
-                        using (var reader = new Newtonsoft.Json.JsonTextReader (new System.IO.StreamReader (stream)))
-                        {
-                            var videoData = JsonSerializer.Deserialize<YoutubeVideoData> (reader) ;
-                            var defLang1  = videoData?.Infos?.FirstOrDefault ()?.Snippet?.DefaultAudioLanguage ;
-                            if (defLang1 != null)
-                            {
-                                var defLang2 = defLang1.Split ('-')[0] ;
-                                if (Lang1.Prefer && (Lang1.Code == defLang1 || Lang1.Code == defLang2))
-                                {
-                                    UseLang = Lang1.Code ;
-                                    break ;
-                                }
-
-                                if (Lang2.Prefer && (Lang2.Code == defLang1 || Lang2.Code == defLang2))
-                                {
-                                    UseLang = Lang2.Code ;
-                                    break ;
-                                }
-
-                                if (Lang3.Prefer && (Lang3.Code == defLang1 || Lang3.Code == defLang2))
-                                {
-                                    UseLang = Lang3.Code ;
-                                    break ;
-                                }
-                            }
-                        }
-
-                        if (Lang1.Code != null && vtts.ContainsKey (Lang1.Code))
+                        var defLang2 = defLang1.Split ('-')[0] ;
+                        if (Lang1.Prefer && (Lang1.Code == defLang1 || Lang1.Code == defLang2))
                         {
                             UseLang = Lang1.Code ;
                             break ;
                         }
 
-                        if (Lang2.Code != null && vtts.ContainsKey (Lang2.Code))
+                        if (Lang2.Prefer && (Lang2.Code == defLang1 || Lang2.Code == defLang2))
                         {
                             UseLang = Lang2.Code ;
                             break ;
                         }
 
-                        if (Lang3.Code != null && vtts.ContainsKey (Lang3.Code))
+                        if (Lang3.Prefer && (Lang3.Code == defLang1 || Lang3.Code == defLang2))
                         {
                             UseLang = Lang3.Code ;
                             break ;
                         }
-
-                        // no language could be selected based on preferences, try Accept-Language
-                        if (Request.Headers.TryGetValue ("Accept-Language", out var acceptLangs))
-                        {
-                            var list    = new List<KeyValuePair<double, string>> () ;
-                            var headers = new Microsoft.AspNetCore.Http.Headers.RequestHeaders (Request.Headers) ;
-                            foreach (var acceptLang in headers.AcceptLanguage)
-                                if (acceptLang.Value.HasValue)
-                                    list.Add (new KeyValuePair<double, string> (acceptLang.Quality ?? 1, acceptLang.Value.Value)) ;
-
-                            list.Sort ((a, b) => b.Key.CompareTo (a.Key)) ;
-
-                            foreach (var kv in list)
-                                if (vtts.ContainsKey (kv.Value))
-                                {
-                                    UseLang = kv.Value ;
-                                    goto selected ;
-                                }
-                        }
-
-                        // no language could be selected based on preferences or Accept-Language, fall back
-                        if (vtts.ContainsKey ("en"))
-                        {
-                            UseLang = "en" ;
-                        }
-                        else
-                            UseLang = vtts.First ().Key ;
                     }
-                    while (false) ;
-                    else
-                    if (!vtts.ContainsKey   (UseLang))
-                        throw new Exception ("This video has no subtitles in " + UseLang) ;
-
-                selected:
-                    AdjustVttCookies        (vtts, videoId, UseLang, title) ;
-                    return RedirectToPage   ("Subtitles", new { VideoId = videoId, Lang = UseLang }) ;
                 }
-            }
 
-            throw new Exception ("Invalid URL format") ;
+                if (Lang1.Code != null && vtts.ContainsKey (Lang1.Code))
+                {
+                    UseLang = Lang1.Code ;
+                    break ;
+                }
+
+                if (Lang2.Code != null && vtts.ContainsKey (Lang2.Code))
+                {
+                    UseLang = Lang2.Code ;
+                    break ;
+                }
+
+                if (Lang3.Code != null && vtts.ContainsKey (Lang3.Code))
+                {
+                    UseLang = Lang3.Code ;
+                    break ;
+                }
+
+                // no language could be selected based on preferences, try Accept-Language
+                if (Request.Headers.TryGetValue ("Accept-Language", out var acceptLangs))
+                {
+                    var list    = new List<KeyValuePair<double, string>> () ;
+                    var headers = new Microsoft.AspNetCore.Http.Headers.RequestHeaders (Request.Headers) ;
+                    foreach (var acceptLang in headers.AcceptLanguage)
+                        if (acceptLang.Value.HasValue)
+                            list.Add (new KeyValuePair<double, string> (acceptLang.Quality ?? 1, acceptLang.Value.Value)) ;
+
+                    list.Sort ((a, b) => b.Key.CompareTo (a.Key)) ;
+
+                    foreach (var kv in list)
+                        if (vtts.ContainsKey (kv.Value))
+                        {
+                            UseLang = kv.Value ;
+                            goto selected ;
+                        }
+                }
+
+                // no language could be selected based on preferences or Accept-Language, fall back
+                if (vtts.ContainsKey ("en"))
+                {
+                    UseLang = "en" ;
+                }
+                else
+                    UseLang = vtts.First ().Key ;
+            }
+            while (false) ;
+            else
+            if (!vtts.ContainsKey   (UseLang))
+                throw new Exception ("This video has no subtitles in " + UseLang) ;
+
+        selected:
+            AdjustVttCookies        (vtts, videoId, UseLang, title) ;
+            return RedirectToPage   ("Subtitles", new { VideoId = videoId, Lang = UseLang }) ;
         }
     }
 }
