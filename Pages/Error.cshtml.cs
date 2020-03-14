@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,8 @@ namespace youtube_subs.Pages
         public string RequestId { get; set; }
 
         public bool ShowRequestId => !string.IsNullOrEmpty (RequestId);
+
+        public string Message => HttpContext.Features.Get<IExceptionHandlerPathFeature> ()?.Error?.Message ;
 
         private readonly ILogger<ErrorModel> _logger;
 
