@@ -81,6 +81,12 @@ namespace youtube_subs
 
         public static string GetVideoId (string url)
         {
+            // fix soft hyphens randomly inserted by Facebook
+            return GetVideoIdInternal (url)?.Replace ((char) 0xAD, '-') ;
+        }
+
+        private static string GetVideoIdInternal (string url)
+        {
             if (!Uri.TryCreate (url, UriKind.Absolute, out var videoUri))
                 return null ;
 
