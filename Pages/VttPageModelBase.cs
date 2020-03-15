@@ -14,7 +14,7 @@ namespace youtube_subs.Pages
 
             Response.Cookies.Append ($"vtt-{videoId}-langs", String.Join (',', vtts.Keys)) ;
             Response.Cookies.Append ($"vtt-{videoId}-url",   vtts[lang]) ;
-            Response.Cookies.Append ("title", title ?? $"#{videoId}") ;
+            Response.Cookies.Append ($"vtt-{videoId}-title", title ?? $"#{videoId}") ;
         }
     }
 }

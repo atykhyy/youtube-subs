@@ -50,6 +50,8 @@ namespace youtube_subs.Pages
                     if (vtts.ContainsKey (item.Value))
                         Langs.Add (item) ;
 
+                Title = title ;
+
                 AdjustVttCookies (vtts, VideoId, Lang, title) ;
             }
             else
@@ -59,8 +61,11 @@ namespace youtube_subs.Pages
                     if (vttLangs.Contains (item.Value))
                         Langs.Add (item) ;
 
-                Title = Request.Cookies["title"] ?? $"#{VideoId}" ;
+                Title = Request.Cookies[$"vtt-{VideoId}-title"] ;
             }
+
+            if (Title == null)
+                Title  = $"#{VideoId}" ;
 
             using (var client = new HttpClient ())
             using (HttpContext.RequestAborted.Register (client.CancelPendingRequests))

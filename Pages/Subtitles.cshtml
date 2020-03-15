@@ -67,6 +67,9 @@ body              { position:absolute;height:99%; }
       }
       window.requestAnimationFrame(checkPlayerTime);
     }
+    if(document.title.startsWith('#')) {
+      document.title = player.getVideoData().title;
+    }
     window.requestAnimationFrame(checkPlayerTime);
   }
   function onStateChange(event) {
