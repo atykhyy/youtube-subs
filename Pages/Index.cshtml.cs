@@ -40,7 +40,6 @@ namespace youtube_subs.Pages
             m_logger = logger ;
         }
 
-        [System.ComponentModel.DataAnnotations.RegularExpression (@"^https\://(www|m).youtube.com/watch\?v\=[a-zA-Z_-]+$")]
         [BindProperty]
         public string VideoUrl { get ; set ; }
 
@@ -105,20 +104,10 @@ namespace youtube_subs.Pages
             return RedirectToPage () ;
         }
 
-        public Task<IActionResult> OnPostReadAsync ()
+        public async Task<IActionResult> OnPostReadAsync ()
         {
-            if (VideoUrl?.StartsWith ("https://m.youtube.com/watch?v=") == true)
-                return ProcessPostAsync (VideoUrl.Substring (30)) ;
-
-            if (VideoUrl?.StartsWith ("https://www.youtube.com/watch?v=") == true)
-                return ProcessPostAsync (VideoUrl.Substring (32)) ;
-
-            return Task.FromException<IActionResult> (new Exception ("Invalid URL format")) ;
-        }
-
-        private async Task<IActionResult> ProcessPostAsync (string videoId)
-        {
-            if (!videoId.IsAbsolutelySafe ())
+            var videoId  = Helpers.GetVideoId (VideoUrl) ;
+            if (videoId == null || !videoId.IsAbsolutelySafe ())
                 throw new Exception ("Invalid URL format") ;
 
             var (vtts, title) = await Helpers.GetManifestDataAsync (videoId, HttpContext.RequestAborted) ;

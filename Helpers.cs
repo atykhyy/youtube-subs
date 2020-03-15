@@ -78,5 +78,70 @@ namespace youtube_subs
 
             return (vtts, manifest.Title) ;
         }
+
+        public static string GetVideoId (string url)
+        {
+            if (!Uri.TryCreate (url, UriKind.Absolute, out var videoUri))
+                return null ;
+
+            // h/t https://gist.github.com/rodrigoborgesdeoliveira/987683cfbfcc8d800192da1e73adc486
+            switch (videoUri.Host)
+            {
+            case "youtu.be":
+                return videoUri.AbsolutePath.Substring (1) ;
+            case "youtube.com":
+            case "m.youtube.com":
+            case "www.youtube.com":
+            case "www.youtube-nocookie.com":
+                break ;
+            default:
+                return null ;
+            }
+
+            var path  = videoUri.AbsolutePath ;
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery (videoUri.Query) ;
+
+            if (path == "/" ||
+                path == "/ytscreeningroom" ||
+                path == "/watch")
+            {
+                if (query.TryGetValue ("v",  out var values))
+                    foreach (var value in values)
+                        return value.ToString () ;
+
+                if (query.TryGetValue ("vi", out values))
+                    foreach (var value in values)
+                        return value.ToString () ;
+
+                return null ;
+            }
+            else
+            if (path.StartsWith ("/embed/"))
+            {
+                return path.Substring (7) ;
+            }
+            else
+            if (path.StartsWith ("/e/") ||
+                path.StartsWith ("/v/"))
+            {
+                return path.Substring (3) ;
+            }
+            else
+            if (path.StartsWith ("/vi/"))
+            {
+                return path.Substring (4) ;
+            }
+            else
+            if (path.StartsWith ("/user/"))
+            {
+                var index = videoUri.Fragment.LastIndexOf ('/') ;
+                if (index > 0)
+                    return videoUri.Fragment.Substring (index + 1) ;
+
+                return null ;
+            }
+            else
+                return path.Substring (1) ;
+        }
     }
 }
