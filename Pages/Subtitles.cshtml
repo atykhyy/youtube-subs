@@ -10,6 +10,7 @@
 <style type='text/css'>
 <!--
 #text { line-height:1.5; }
+#text:focus { outline: none; }
 @@media screen and (orientation:landscape) {
 #text             { width:66%;left:4.5%;position:absolute;overflow-y:scroll;height:99%; }
 #player-container { width:25%;position:absolute;left:75%; }
@@ -22,7 +23,7 @@ body              { position:absolute;height:99%; }
 -->
 </style>
 </head>
-<body>
+<body onload="onLoaded()">
   <script>
   var tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
@@ -101,6 +102,9 @@ body              { position:absolute;height:99%; }
         player.seekTo(tcode,true);
       }, 250);
     }
+  }
+  function onLoaded() {
+    document.getElementById('text').focus();
   }
   </script>
   <div id='player-container'>
