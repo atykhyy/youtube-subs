@@ -18,21 +18,47 @@
     <p />
     <p>Select your preferred subtitle languages:</p>
     <form method="post" asp-page-handler="Save">
-        <select asp-for="Lang1.Code" asp-items="@Languages.Items">
-        </select>
-        <br />
-        <input  asp-for="Lang1.Prefer">Prefer this language if it is the audio language
-        <br />
-        <select asp-for="Lang2.Code" asp-items="@Languages.Items">
-        </select>
-        <br />
-        <input  asp-for="Lang2.Prefer">Prefer this language if it is the audio language
-        <br />
-        <select asp-for="Lang3.Code" asp-items="@Languages.Items">
-        </select>
-        <br />
-        <input  asp-for="Lang3.Prefer">Prefer this language if it is the audio language
-        <br />
+        <table align="center">
+            <thead>
+                <tr>
+                    <td />
+                    <td>Language</td>
+                    <td>Use this language if it is the audio language</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>#1</td>
+                    <td>
+                        <select asp-for="Lang1.Code" asp-items="@Languages.Items">
+                        </select>
+                    </td>
+                    <td>
+                        <input asp-for="Lang1.Prefer">
+                    </td>
+                </tr>
+                <tr>
+                    <td>#2</td>
+                    <td>
+                        <select asp-for="Lang2.Code" asp-items="@Languages.Items">
+                        </select>
+                    </td>
+                    <td>
+                        <input asp-for="Lang2.Prefer">
+                    </td>
+                </tr>
+                <tr>
+                    <td>#3</td>
+                    <td>
+                        <select asp-for="Lang3.Code" asp-items="@Languages.Items">
+                        </select>
+                    </td>
+                    <td>
+                        <input asp-for="Lang3.Prefer">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
         <input type="submit" value="Save" />
     </form>
 </div>
