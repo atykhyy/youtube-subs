@@ -59,6 +59,9 @@ namespace youtube_subs.Pages
         {
             base.OnPageHandlerExecuting (context) ;
 
+            if (context.HandlerMethod?.MethodInfo?.Name == nameof (OnPostSave))
+                return ;
+
             var prefCookie  = Request.Cookies[nameof (Preferences)] ;
             if (prefCookie != null)
             {
