@@ -106,6 +106,10 @@ body              { position:absolute;height:99%; }
   function onLoaded() {
     document.getElementById('text').focus();
   }
+  function onHideHelp() {
+    document.getElementById('help').style.display = 'none';
+    document.cookie = 'hide-subs-help=1;expires=Fri, 31 Dec 9999 23:59:59 GMT';
+  }
   </script>
   <div id='player-container'>
     <div id='player'></div>
@@ -115,6 +119,20 @@ body              { position:absolute;height:99%; }
         </select>
         <input type="submit" value="&gt;&gt;" />
     </form>
+
+    <p id='help' style="margin-top: 3em;">
+        &#x24d8; Text highlight is synchronized with video position.
+        <br />
+        <small>If text is long, highlight may move off screen. Please scroll manually.</small>
+        <br />
+        <br />
+        Click in text scrolls video to that point and pauses video.
+        <br />
+        Double-click in text scrolls video to that point and starts it.
+        <br />
+        <br />
+        <a href="#" onclick="onHideHelp();">X</a> do not show this again
+    </p>
   </div>
   <div id='text'>
   @{
@@ -170,5 +188,10 @@ body              { position:absolute;height:99%; }
     }
   }
   </div>
+  <script>
+  if (document.cookie.indexOf('hide-subs-help') >= 0) {
+      document.getElementById('help').style.display = 'none';
+  }
+  </script>
 </body>
 </html>
