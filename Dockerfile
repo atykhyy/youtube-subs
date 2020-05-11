@@ -2,7 +2,7 @@
 
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim AS base
 WORKDIR /app
-RUN apt-get update -y && apt-get install python -y && curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /bin/youtube-dl && chmod a+rx /bin/youtube-dl
+RUN apt-get update -y && apt-get install python -y
 EXPOSE 80
 EXPOSE 443
 

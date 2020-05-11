@@ -58,7 +58,7 @@ namespace youtube_subs
 
         public static async Task<(Dictionary<string, string>, string)> GetManifestDataAsync (string videoId, CancellationToken cancellationToken)
         {
-            var (exitCode, output, error) = await ExecAsync ("/bin/youtube-dl", $"-sj --write-auto-sub https://www.youtube.com/watch?v={videoId}", cancellationToken) ;
+            var (exitCode, output, error) = await ExecAsync ("python", $"youtube-dl/youtube_dl/__main__.py -sj --write-auto-sub https://www.youtube.com/watch?v={videoId}", cancellationToken) ;
             if  (exitCode != 0)
                 throw new Exception ($"youtube-dl: {exitCode} => {error}") ;
 

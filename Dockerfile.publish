@@ -1,5 +1,6 @@
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim
-RUN apt-get update -y && apt-get install python -y && curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /bin/youtube-dl && chmod a+rx /bin/youtube-dl
+RUN apt-get update -y && apt-get install python -y
 WORKDIR /app
 COPY . .
+COPY extractors.py youtube-dl/youtube_dl/extractor/extractors.py
 ENTRYPOINT ["dotnet", "youtube-subs.dll"]
